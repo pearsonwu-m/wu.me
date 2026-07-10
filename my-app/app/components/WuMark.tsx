@@ -12,12 +12,8 @@ export function WuMark({
         height: size,
         fontSize: size * 0.75,
         fontFamily,
-        background: "#171717",
-        color: "#ededed",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
       }}
+      className="flex items-center justify-center bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
     >
       吴
     </div>

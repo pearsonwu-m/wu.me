@@ -40,7 +40,7 @@ export default function ThemeToggle() {
             : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100"
         }`}
       >
-        关 Light
+        开 Light
       </button>
       <button
         type="button"
@@ -53,7 +53,7 @@ export default function ThemeToggle() {
             : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100"
         }`}
       >
-        开 Dark
+        关 Dark
       </button>
     </div>
   );
