@@ -7,17 +7,23 @@ type Boid = {
   y: number;
   vx: number;
   vy: number;
+  targetIndex: number;
 };
 
-const BOID_COUNT = 70;
+type Waypoint = { x: number; y: number };
+
+const BOIDS_PER_PIXEL = 1 / 7000;
+const MIN_BOIDS = 140;
+const MAX_BOIDS = 320;
 const MAX_SPEED = 2.4;
 const NEIGHBOR_RADIUS = 60;
-const SEPARATION_RADIUS = 22;
-const MOUSE_RADIUS = 220;
+const SEPARATION_RADIUS = 26;
+const ESCAPE_RADIUS = 160;
+const ESCAPE_STRENGTH = 0.35;
 const MOUSE_STILL_MS = 400;
-const ORBIT_RADIUS = 210;
-const ORBIT_STRENGTH = 0.0025;
-const ORBIT_SPRING = 0.0006;
+const SEEK_STRENGTH = 0.03;
+const ARRIVAL_RADIUS = 24;
+const WANDER_STRENGTH = 0.015;
 const DARK_COLOR = "255,107,26";
 const LIGHT_COLOR = "23,23,23";
 
@@ -33,6 +39,7 @@ export default function BoidField() {
     let width = 0;
     let height = 0;
     const boids: Boid[] = [];
+    let waypoints: Waypoint[] = [];
 
     function resize() {
       const rect = canvas!.parentElement!.getBoundingClientRect();
@@ -48,12 +55,35 @@ export default function BoidField() {
 
     function seed() {
       boids.length = 0;
-      for (let i = 0; i < BOID_COUNT; i++) {
+      const targetCount = Math.round(
+        Math.min(MAX_BOIDS, Math.max(MIN_BOIDS, width * height * BOIDS_PER_PIXEL)),
+      );
+
+      // Scatter a pool of invisible waypoints evenly across the canvas via a
+      // jittered grid. Boids steer toward an assigned waypoint and pick a new
+      // one on arrival, so they travel with purpose instead of jittering
+      // randomly in place, while still covering the whole page over time.
+      const cols = Math.max(1, Math.round(Math.sqrt((targetCount * width) / height)));
+      const rows = Math.max(1, Math.ceil(targetCount / cols));
+      const cellW = width / cols;
+      const cellH = height / rows;
+      waypoints = [];
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          waypoints.push({
+            x: (col + 0.5) * cellW + (Math.random() - 0.5) * cellW * 0.8,
+            y: (row + 0.5) * cellH + (Math.random() - 0.5) * cellH * 0.8,
+          });
+        }
+      }
+
+      for (let i = 0; i < targetCount; i++) {
         boids.push({
           x: Math.random() * width,
           y: Math.random() * height,
           vx: (Math.random() - 0.5) * MAX_SPEED,
           vy: (Math.random() - 0.5) * MAX_SPEED,
+          targetIndex: Math.floor(Math.random() * waypoints.length),
         });
       }
     }
@@ -83,9 +113,6 @@ export default function BoidField() {
       if (target.active && now - lastMoveAt > MOUSE_STILL_MS) {
         target.active = false;
       }
-
-      const homeX = width / 2;
-      const homeY = height / 2;
 
       ctx!.clearRect(0, 0, width, height);
 
@@ -123,8 +150,8 @@ export default function BoidField() {
           avgY /= count;
           avgVX /= count;
           avgVY /= count;
-          b.vx += (avgX - b.x) * 0.0005;
-          b.vy += (avgY - b.y) * 0.0005;
+          b.vx += (avgX - b.x) * 0.00003;
+          b.vy += (avgY - b.y) * 0.00003;
           b.vx += (avgVX - b.vx) * 0.03;
           b.vy += (avgVY - b.vy) * 0.03;
         }
@@ -133,24 +160,28 @@ export default function BoidField() {
         b.vy += sepY * 0.03;
 
         if (target.active) {
-          const dx = target.x - b.x;
-          const dy = target.y - b.y;
+          const dx = b.x - target.x;
+          const dy = b.y - target.y;
           const dist = Math.hypot(dx, dy);
-          if (dist < MOUSE_RADIUS && dist > 0) {
-            const force = (1 - dist / MOUSE_RADIUS) * 0.02;
+          if (dist < ESCAPE_RADIUS && dist > 0) {
+            const force = (1 - dist / ESCAPE_RADIUS) * ESCAPE_STRENGTH;
             b.vx += (dx / dist) * force;
             b.vy += (dy / dist) * force;
           }
-        } else {
-          const dx = b.x - homeX;
-          const dy = b.y - homeY;
-          const dist = Math.hypot(dx, dy) || 1;
-          b.vx += (-dy / dist) * ORBIT_STRENGTH;
-          b.vy += (dx / dist) * ORBIT_STRENGTH;
-          const radial = (dist - ORBIT_RADIUS) * -ORBIT_SPRING;
-          b.vx += (dx / dist) * radial;
-          b.vy += (dy / dist) * radial;
         }
+
+        const wp = waypoints[b.targetIndex];
+        const wdx = wp.x - b.x;
+        const wdy = wp.y - b.y;
+        const wdist = Math.hypot(wdx, wdy);
+        if (wdist < ARRIVAL_RADIUS) {
+          b.targetIndex = Math.floor(Math.random() * waypoints.length);
+        } else {
+          b.vx += (wdx / wdist) * SEEK_STRENGTH;
+          b.vy += (wdy / wdist) * SEEK_STRENGTH;
+        }
+        b.vx += (Math.random() - 0.5) * WANDER_STRENGTH;
+        b.vy += (Math.random() - 0.5) * WANDER_STRENGTH;
 
         const speed = Math.hypot(b.vx, b.vy);
         if (speed > MAX_SPEED) {

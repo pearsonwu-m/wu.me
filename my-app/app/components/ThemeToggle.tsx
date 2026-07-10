@@ -22,6 +22,8 @@ function getServerSnapshot() {
 function setTheme(dark: boolean) {
   document.documentElement.classList.toggle("dark", dark);
   localStorage.setItem("theme", dark ? "dark" : "light");
+  const favicon = document.getElementById("favicon") as HTMLLinkElement | null;
+  if (favicon) favicon.href = dark ? "/favicon/dark" : "/favicon/light";
 }
 
 export default function ThemeToggle() {

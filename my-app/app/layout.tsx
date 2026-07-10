@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: "Physics, technology, and society.",
 };
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
+const themeInitScript = `(function(){try{var d=localStorage.getItem("theme")==="dark";document.documentElement.classList.toggle("dark",d);var l=document.getElementById("favicon");if(l)l.href=d?"/favicon/dark":"/favicon/light";}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -36,6 +36,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <link id="favicon" rel="icon" href="/favicon/light" type="image/png" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col">
