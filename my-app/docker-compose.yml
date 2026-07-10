@@ -1,0 +1,7 @@
+services:
+  website:
+    build: .
+    container_name: wu-me
+    restart: unless-stopped
+    ports:
+      - "3000:3000"

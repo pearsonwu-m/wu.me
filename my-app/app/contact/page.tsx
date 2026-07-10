@@ -16,7 +16,7 @@ export default function ContactPage() {
       <p>
         The best way to reach me is by email at{" "}
         <a
-          href="mailto:pearson@wu.me"
+          href="mailto:pearson@pinsong.me"
           className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-50"
         >
           pearson@wu.me
