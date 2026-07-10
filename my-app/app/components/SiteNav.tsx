@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WuMark } from "./WuMark";
+import ThemeToggle from "./ThemeToggle";
 
 export default function SiteNav() {
   return (
@@ -27,6 +28,7 @@ export default function SiteNav() {
           >
             Blog
           </Link>
+          <ThemeToggle />
         </div>
       </nav>
     </header>
