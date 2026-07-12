@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Link from "next/link";
 import SiteNav from "./components/SiteNav";
+import { WuMark } from "./components/WuMark";
 import "./globals.css";
 
 const absans = localFont({
@@ -40,6 +42,13 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <Link
+          href="/"
+          aria-label="Home"
+          className="fixed left-4 top-4 z-50 sm:left-6 sm:top-5"
+        >
+          <WuMark size={44} />
+        </Link>
         <SiteNav />
         {children}
       </body>

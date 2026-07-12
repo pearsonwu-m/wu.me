@@ -19,7 +19,7 @@ export default function ContactPage() {
           href="mailto:pearson@pinsong.me"
           className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-50"
         >
-          pearson@wu.me
+          pearson@pinsong.me
         </a>
         .
       </p>

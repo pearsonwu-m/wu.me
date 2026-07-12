@@ -37,3 +37,7 @@ export function MailIcon({ className }: { className?: string }) {
 export function BookIcon({ className }: { className?: string }) {
   return <CharacterIcon char="文" className={className} />;
 }
+
+export function ProjectIcon({ className }: { className?: string }) {
+  return <CharacterIcon char="作" className={className} />;
+}
