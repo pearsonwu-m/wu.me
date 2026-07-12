@@ -63,7 +63,7 @@ export default function SiteNav() {
 
   return (
     <div
-      className={`fixed right-4 top-4 z-50 flex h-11 items-center overflow-hidden rounded-full transition-[width,background-color] duration-500 ease-[cubic-bezier(0.87,0,0.13,1)] sm:right-6 sm:top-5 ${
+      className={`fixed right-4 top-4 z-50 hidden h-11 items-center overflow-hidden rounded-full transition-[width,background-color] duration-500 ease-[cubic-bezier(0.87,0,0.13,1)] sm:right-6 sm:top-5 sm:flex ${
         expanded
           ? "w-[min(calc(100vw-2rem),34rem)] bg-white/90 shadow-sm backdrop-blur-sm dark:bg-black/80"
           : "w-11 bg-zinc-100 dark:bg-zinc-800"

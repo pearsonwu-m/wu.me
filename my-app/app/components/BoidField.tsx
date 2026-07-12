@@ -69,6 +69,10 @@ export default function BoidField() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // Skip the whole simulation on phones: real mobile browsers were
+    // rendering a blank canvas here, and the boid field is a desktop
+    // flourish anyway — phones just get the plain links.
+    if (!window.matchMedia("(min-width: 640px)").matches) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -569,7 +573,7 @@ export default function BoidField() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 h-full w-full"
+      className="absolute inset-0 hidden h-full w-full sm:block"
       aria-hidden="true"
     />
   );

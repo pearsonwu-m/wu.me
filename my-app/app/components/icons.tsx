@@ -7,7 +7,7 @@ function CharacterIcon({
 }) {
   return (
     <span
-      className={`font-chinese flex items-center justify-center text-[42px] leading-none ${className ?? ""}`}
+      className={`font-chinese flex -translate-y-[3px] items-end justify-center text-[42px] leading-none ${className ?? ""}`}
     >
       {char}
     </span>

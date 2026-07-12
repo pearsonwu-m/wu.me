@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { BOID_SLOT_FOUND_EVENT, BOID_WORD_COMPLETE_EVENT, BOID_WORD_HOVER_EVENT } from "./boidEvents";
 
@@ -11,10 +11,30 @@ const ITEMS = [
   { href: "/blog", word: "BLOG" },
 ];
 
+// Keep in sync with BoidField's own check: the boid animation is a desktop
+// flourish and doesn't run on phones, so links there must navigate normally
+// instead of waiting on a completion event that will never fire.
+const DESKTOP_QUERY = "(min-width: 640px)";
+
+function subscribeIsDesktop(callback: () => void) {
+  const mql = window.matchMedia(DESKTOP_QUERY);
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+function getIsDesktopSnapshot() {
+  return window.matchMedia(DESKTOP_QUERY).matches;
+}
+
+function getIsDesktopServerSnapshot() {
+  return false;
+}
+
 export default function PlaceholderLinks() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [foundSlots, setFoundSlots] = useState<Record<string, boolean>>({});
+  const isDesktop = useSyncExternalStore(subscribeIsDesktop, getIsDesktopSnapshot, getIsDesktopServerSnapshot);
 
   const handleEnter = useCallback((href: string) => setHovered(href), []);
   const handleLeave = useCallback((href: string) => {
@@ -50,10 +70,14 @@ export default function PlaceholderLinks() {
   return (
     <div
       data-boid-links=""
-      className="relative z-10 flex flex-wrap items-center justify-center gap-8 sm:gap-10"
+      className="relative z-10 flex flex-col items-start gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-10"
     >
       {ITEMS.map((item) => {
         const isComplete = !!completed[item.href];
+        // On desktop, navigation waits for the boid-spelled word to finish
+        // assembling; on phones there's no such animation, so links are
+        // always immediately clickable.
+        const blocksNav = isDesktop && !isComplete;
 
         const slots = item.word.split("").map((ch, i) => {
           const found = !!foundSlots[`${item.href}:${i}`];
@@ -85,16 +109,27 @@ export default function PlaceholderLinks() {
             key={item.href}
             href={item.href}
             data-word={item.href}
+            aria-label={item.word}
             onMouseEnter={() => handleEnter(item.href)}
             onMouseLeave={() => handleLeave(item.href)}
             onFocus={() => handleEnter(item.href)}
             onBlur={() => handleLeave(item.href)}
             onClick={(e) => {
-              if (!isComplete) e.preventDefault();
+              if (blocksNav) e.preventDefault();
             }}
-            className={`flex gap-1 ${isComplete ? "cursor-pointer" : "cursor-default"}`}
+            className={`text-lg font-display uppercase tracking-wide text-zinc-700 dark:text-zinc-300 sm:text-base ${
+              blocksNav ? "cursor-default" : "cursor-pointer"
+            }`}
           >
-            {slots}
+            {/* Phones skip the boid animation entirely, so the word is just
+                plain readable text; desktop hides this and shows the
+                letter slots the boids fly into instead. */}
+            <span aria-hidden className="sm:hidden">
+              {item.word}
+            </span>
+            <span aria-hidden className="hidden gap-1 sm:flex">
+              {slots}
+            </span>
           </Link>
         );
       })}

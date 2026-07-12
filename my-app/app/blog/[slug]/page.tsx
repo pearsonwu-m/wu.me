@@ -36,7 +36,7 @@ export default async function BlogPost({
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16 sm:px-10">
         <Link
           href="/blog"
-          className="text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100"
+          className="hidden text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 sm:block dark:text-zinc-500 dark:hover:text-zinc-100"
         >
           ← Blog
         </Link>
