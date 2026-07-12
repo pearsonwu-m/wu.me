@@ -64,18 +64,16 @@ export default function PlaceholderLinks() {
               data-slot-char={ch}
               className="relative inline-block h-6 w-4 sm:h-7 sm:w-5"
             >
+              {/* A dotted, gently pulsing underline stands in for the letter
+                  until a boid carrying it lands; it drops away once found,
+                  and in dark mode it borrows the boids' own orange so the
+                  placeholders read as part of the same system. */}
               <span
                 aria-hidden
-                className={`absolute inset-0 origin-bottom bg-[linear-gradient(to_top,rgba(0,0,0,0.08),transparent_70%)] transition-transform duration-300 ease-in dark:bg-[linear-gradient(to_top,rgba(255,255,255,0.12),transparent_70%)] ${
-                  found ? "scale-y-0" : "scale-y-100"
-                }`}
-              />
-              <span
-                aria-hidden
-                className={`absolute inset-x-0 bottom-0 border-b transition-all duration-500 ease-in ${
+                className={`absolute inset-x-0 bottom-1 border-b border-dotted transition-all duration-500 ease-in ${
                   found
-                    ? "delay-300 translate-y-2 border-transparent opacity-0"
-                    : "border-zinc-300 opacity-100 dark:border-zinc-600"
+                    ? "translate-y-2 border-transparent opacity-0"
+                    : "animate-pulse border-zinc-300 dark:border-[#ff6b1a]/70"
                 }`}
               />
             </span>
