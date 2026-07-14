@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
+import BlockCursor from "./components/BlockCursor";
 import SiteNav from "./components/SiteNav";
 import { WuMark } from "./components/WuMark";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <BlockCursor />
         <Link
           href="/"
           aria-label="Home"
