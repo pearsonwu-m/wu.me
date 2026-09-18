@@ -37,6 +37,11 @@ const INTEREST_POINT_COUNT = 10;
 const INTEREST_RADIUS_MULTIPLIER = 1.7;
 const MAX_INTEREST_RADIUS_RATIO = 0.4;
 const INTEREST_MIN_GAP = 32;
+// The neighbour scan is O(n^2) per frame, so it compares squared distances and
+// only takes a square root for the few pairs close enough to separate.
+const NEIGHBOR_RADIUS_SQ = NEIGHBOR_RADIUS * NEIGHBOR_RADIUS;
+const SEPARATION_RADIUS_SQ = SEPARATION_RADIUS * SEPARATION_RADIUS;
+const ESCAPE_RADIUS_SQ = ESCAPE_RADIUS * ESCAPE_RADIUS;
 const SEEK_STRENGTH = 0.03;
 const ARRIVAL_RADIUS = 24;
 const FALLBACK_AVOID_RADIUS_RATIO = 0.12;
@@ -54,6 +59,15 @@ const THEME_TRANSITION_SPEED = 0.04;
 const FOREGROUND_LIGHT_RGB: [number, number, number] = [23, 23, 23];
 const FOREGROUND_DARK_RGB: [number, number, number] = [237, 237, 237];
 const LOCK_TRANSITION_SPEED = 0.06;
+const ARRIVAL_RADIUS_SQ = ARRIVAL_RADIUS * ARRIVAL_RADIUS;
+const HOMING_ARRIVE_DIST_SQ = HOMING_ARRIVE_DIST * HOMING_ARRIVE_DIST;
+
+// The ring of interest points only ever changes scale and centre, never shape,
+// so the unit circle is computed once here instead of rebuilt every frame.
+const INTEREST_RING = Array.from({ length: INTEREST_POINT_COUNT }, (_, p) => {
+  const angle = (p / INTEREST_POINT_COUNT) * Math.PI * 2;
+  return { cos: Math.cos(angle), sin: Math.sin(angle) };
+});
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -82,7 +96,6 @@ export default function BoidField() {
     let nameRect: Rect | null = null;
     let linksRect: Rect | null = null;
     let letterFontFamily = "sans-serif";
-    const linksAvoidMargin = LINKS_AVOID_MARGIN_MIN;
 
     function relativeRect(parent: Element, el: Element): Rect {
       const parentRect = parent.getBoundingClientRect();
@@ -138,21 +151,6 @@ export default function BoidField() {
       );
 
       return { cx, cy, avoidRadius, interestRadius };
-    }
-
-    // A fixed ring of attractor points around the zone center; each boid
-    // seeks its assigned point and picks the next one (per its interestDir)
-    // on arrival, giving a loose point-to-point drift around the name.
-    function getInterestPoints(zone: { cx: number; cy: number; interestRadius: number }): { x: number; y: number }[] {
-      const points: { x: number; y: number }[] = [];
-      for (let p = 0; p < INTEREST_POINT_COUNT; p++) {
-        const angle = (p / INTEREST_POINT_COUNT) * Math.PI * 2;
-        points.push({
-          x: zone.cx + Math.cos(angle) * zone.interestRadius,
-          y: zone.cy + Math.sin(angle) * zone.interestRadius,
-        });
-      }
-      return points;
     }
 
     type SlotState = {
@@ -211,9 +209,11 @@ export default function BoidField() {
           let bestDist = Infinity;
           for (let k = 0; k < boids.length; k++) {
             if (used.has(k) || boids[k].slotTarget || boids[k].letter !== slot.char) continue;
-            const d = Math.hypot(boids[k].x - slot.x, boids[k].y - slot.y);
-            if (d < bestDist) {
-              bestDist = d;
+            const sdx = boids[k].x - slot.x;
+            const sdy = boids[k].y - slot.y;
+            const dSq = sdx * sdx + sdy * sdy;
+            if (dSq < bestDist) {
+              bestDist = dSq;
               bestIdx = k;
             }
           }
@@ -228,7 +228,9 @@ export default function BoidField() {
           const slot = slots[i];
           if (slot.found || slot.boidIndex === null) continue;
           const b = boids[slot.boidIndex];
-          if (b && Math.hypot(b.x - slot.x, b.y - slot.y) <= HOMING_ARRIVE_DIST) {
+          const adx = b ? b.x - slot.x : 0;
+          const ady = b ? b.y - slot.y : 0;
+          if (b && adx * adx + ady * ady <= HOMING_ARRIVE_DIST_SQ) {
             slot.found = true;
             window.dispatchEvent(new CustomEvent(BOID_SLOT_FOUND_EVENT, { detail: { href, index: i } }));
           }
@@ -257,8 +259,9 @@ export default function BoidField() {
       const closestY = Math.min(Math.max(b.y, rect.top), rect.bottom);
       const dx = b.x - closestX;
       const dy = b.y - closestY;
-      const dist = Math.hypot(dx, dy);
-      if (dist >= margin) return;
+      const distSq = dx * dx + dy * dy;
+      if (distSq >= margin * margin) return;
+      const dist = Math.sqrt(distSq);
       if (dist > 0) {
         const falloff = 1 - dist / margin;
         const force = falloff * falloff * strength;
@@ -269,20 +272,22 @@ export default function BoidField() {
         const cy = (rect.top + rect.bottom) / 2;
         const cdx = b.x - cx || 1;
         const cdy = b.y - cy;
-        const cdist = Math.hypot(cdx, cdy) || 1;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
         b.vx += (cdx / cdist) * strength;
         b.vy += (cdy / cdist) * strength;
       }
     }
 
     function isInAvoidZone(zone: { cx: number; cy: number; avoidRadius: number }, x: number, y: number): boolean {
-      if (Math.hypot(x - zone.cx, y - zone.cy) < zone.avoidRadius) return true;
+      const zdx = x - zone.cx;
+      const zdy = y - zone.cy;
+      if (zdx * zdx + zdy * zdy < zone.avoidRadius * zone.avoidRadius) return true;
       if (
         linksRect &&
-        x >= linksRect.left - linksAvoidMargin &&
-        x <= linksRect.right + linksAvoidMargin &&
-        y >= linksRect.top - linksAvoidMargin &&
-        y <= linksRect.bottom + linksAvoidMargin
+        x >= linksRect.left - LINKS_AVOID_MARGIN_MIN &&
+        x <= linksRect.right + LINKS_AVOID_MARGIN_MIN &&
+        y >= linksRect.top - LINKS_AVOID_MARGIN_MIN &&
+        y <= linksRect.bottom + LINKS_AVOID_MARGIN_MIN
       )
         return true;
       return false;
@@ -405,7 +410,6 @@ export default function BoidField() {
       updateActiveSlots();
 
       const zone = getCenterZone();
-      const interestPoints = getInterestPoints(zone);
 
       for (let i = 0; i < boids.length; i++) {
         const b = boids[i];
@@ -413,8 +417,9 @@ export default function BoidField() {
         if (b.slotTarget) {
           const dx = b.slotTarget.x - b.x;
           const dy = b.slotTarget.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > HOMING_ARRIVE_DIST) {
+          const distSq = dx * dx + dy * dy;
+          if (distSq > HOMING_ARRIVE_DIST_SQ) {
+            const dist = Math.sqrt(distSq);
             const speed = Math.min(HOMING_MAX_SPEED, dist * HOMING_SPEED_GAIN + HOMING_BASE_SPEED);
             b.vx = (dx / dist) * speed;
             b.vy = (dy / dist) * speed;
@@ -442,17 +447,17 @@ export default function BoidField() {
           const o = boids[j];
           const dx = o.x - b.x;
           const dy = o.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < NEIGHBOR_RADIUS && dist > 0) {
-            avgX += o.x;
-            avgY += o.y;
-            avgVX += o.vx;
-            avgVY += o.vy;
-            count++;
-            if (dist < SEPARATION_RADIUS) {
-              sepX -= dx / dist;
-              sepY -= dy / dist;
-            }
+          const distSq = dx * dx + dy * dy;
+          if (distSq >= NEIGHBOR_RADIUS_SQ || distSq === 0) continue;
+          avgX += o.x;
+          avgY += o.y;
+          avgVX += o.vx;
+          avgVY += o.vy;
+          count++;
+          if (distSq < SEPARATION_RADIUS_SQ) {
+            const dist = Math.sqrt(distSq);
+            sepX -= dx / dist;
+            sepY -= dy / dist;
           }
         }
 
@@ -470,13 +475,14 @@ export default function BoidField() {
         b.vx += sepX * 0.03;
         b.vy += sepY * 0.03;
 
-        applyBoundaryAvoidance(b, linksRect, linksAvoidMargin, LINKS_AVOID_STRENGTH);
+        applyBoundaryAvoidance(b, linksRect, LINKS_AVOID_MARGIN_MIN, LINKS_AVOID_STRENGTH);
 
         if (target.active) {
           const dx = b.x - target.x;
           const dy = b.y - target.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < ESCAPE_RADIUS && dist > 0) {
+          const distSq = dx * dx + dy * dy;
+          if (distSq < ESCAPE_RADIUS_SQ && distSq > 0) {
+            const dist = Math.sqrt(distSq);
             const force = (1 - dist / ESCAPE_RADIUS) * ESCAPE_STRENGTH;
             b.vx += (dx / dist) * force;
             b.vy += (dy / dist) * force;
@@ -489,20 +495,21 @@ export default function BoidField() {
         // wander from point to point instead of tracing a strict circle.
         const cdx = b.x - zone.cx || 1;
         const cdy = b.y - zone.cy;
-        const cdist = Math.hypot(cdx, cdy) || 1;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
         if (cdist < zone.avoidRadius) {
           const leaveForce = (1 - cdist / zone.avoidRadius) * AVOID_LEAVE_STRENGTH;
           b.vx += (cdx / cdist) * leaveForce;
           b.vy += (cdy / cdist) * leaveForce;
         }
 
-        const point = interestPoints[b.targetIndex];
-        const pdx = point.x - b.x;
-        const pdy = point.y - b.y;
-        const pdist = Math.hypot(pdx, pdy);
-        if (pdist < ARRIVAL_RADIUS) {
+        const ring = INTEREST_RING[b.targetIndex];
+        const pdx = zone.cx + ring.cos * zone.interestRadius - b.x;
+        const pdy = zone.cy + ring.sin * zone.interestRadius - b.y;
+        const pdistSq = pdx * pdx + pdy * pdy;
+        if (pdistSq < ARRIVAL_RADIUS_SQ) {
           b.targetIndex = (b.targetIndex + b.interestDir + INTEREST_POINT_COUNT) % INTEREST_POINT_COUNT;
         } else {
+          const pdist = Math.sqrt(pdistSq);
           b.vx += (pdx / pdist) * SEEK_STRENGTH;
           b.vy += (pdy / pdist) * SEEK_STRENGTH;
         }
@@ -510,8 +517,9 @@ export default function BoidField() {
         b.vx += (Math.random() - 0.5) * WANDER_STRENGTH;
         b.vy += (Math.random() - 0.5) * WANDER_STRENGTH;
 
-        const speed = Math.hypot(b.vx, b.vy);
-        if (speed > MAX_SPEED) {
+        const speedSq = b.vx * b.vx + b.vy * b.vy;
+        if (speedSq > MAX_SPEED * MAX_SPEED) {
+          const speed = Math.sqrt(speedSq);
           b.vx = (b.vx / speed) * MAX_SPEED;
           b.vy = (b.vy / speed) * MAX_SPEED;
         }

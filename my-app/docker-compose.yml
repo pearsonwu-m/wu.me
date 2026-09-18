@@ -5,5 +5,10 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env.local
     volumes:
       - ./content:/app/content:ro
+      # Append-only contact-message log. Must be a volume: without it the
+      # store lives in the container layer and is lost on every redeploy.
+      - ./data:/app/data

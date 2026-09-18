@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import TopicPage from "../components/TopicPage";
+import ContactForm from "../components/ContactForm";
 import { MailIcon } from "../components/icons";
 
 export const metadata: Metadata = {
@@ -24,9 +25,9 @@ export default function ContactPage() {
         .
       </p>
       <p>
-        Whether it&rsquo;s about physics, technology, something you read on
-        the blog, or just to say hi — I try to reply to everything.
+        I'll try to respond, but I can't promise that I will. 
       </p>
+      <ContactForm />
       <div className="flex gap-4">
         <a
           href="https://github.com/pearsonwu-m"
