@@ -14,33 +14,30 @@ function formatDate(date: string): string {
   });
 }
 
-function PostCard({ post }: { post: PostMeta }) {
+function PostRow({ post }: { post: PostMeta }) {
   return (
-    <Link
-      href={`/blog/${post.slug}`}
-      className="group flex flex-col gap-1 rounded-2xl border border-black/[.08] bg-white p-6 transition-colors hover:border-black/[.16] dark:border-white/[.08] dark:bg-zinc-950 dark:hover:border-white/[.16]"
-    >
+    <Link href={`/blog/${post.slug}`} className="group flex flex-col gap-1">
       <span className="text-xs uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
         {formatDate(post.date)} · {post.readingTime} min read
       </span>
-      <h2 className="font-title text-lg text-zinc-900 group-hover:underline dark:text-zinc-50">
-        {post.title}
-      </h2>
+      {/* Tags sit on the title's baseline, so a long title wraps and leaves
+          them trailing the last line rather than pushing them onto their own. */}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h2 className="font-title text-lg text-zinc-900 group-hover:underline dark:text-zinc-50">
+          {post.title}
+        </h2>
+        {post.tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
       <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
         {post.description}
       </p>
-      {post.tags.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-2">
-          {post.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
     </Link>
   );
 }
@@ -133,9 +130,9 @@ export default function BlogViews({
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         {visiblePosts.map((post) => (
-          <PostCard key={post.slug} post={post} />
+          <PostRow key={post.slug} post={post} />
         ))}
         {visiblePosts.length === 0 && (
           <p className="text-sm text-zinc-500 dark:text-zinc-500">

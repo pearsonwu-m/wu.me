@@ -171,7 +171,7 @@ async function sendEmail(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.CONTACT_FROM_EMAIL ?? "contact@wu.me",
+        from: process.env.CONTACT_FROM_EMAIL ?? "contact@pinsong.me",
         to,
         reply_to: msg.email,
         subject: buildSubject(msg),
