@@ -25,6 +25,8 @@ RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.ts ./next.config.ts
+# The favicon route reads this font from disk at request time.
+COPY --from=builder /app/app/fonts ./app/fonts
 
 EXPOSE 3000
 
